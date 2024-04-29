@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Stats Overlay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Bungee', cursive;
+            background: transparent;
+            color: white;
+            text-align: left;
+        }
+
+        #player-buttons {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .player-button {
+            background: #c3efef;
+            color: #c3efef;
+            border: 2px solid white;
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-family: 'Bungee', cursive;
+            cursor: pointer;
+            text-shadow: 1px 1px 1px white;
+            -webkit-text-stroke: 0.5px white;
+        }
+
+        #selected-player-stats {
+            margin-top: 20px;
+            color: white;
+        }
+
+        #buildSelector {
+            margin-top: 20px;
+            font-family: 'Bungee', cursive;
+            font-size: 16px;
+        }
+
+        #static-info {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <select id="buildSelector" onchange="updateBuildInfo()">
+        <option value="3Pt PM">3Pt PM</option>
+        <option value="Playmaking Perimeter Creator (99 3Ball)">Playmaking Perimeter Creator (99 3Ball)</option>
+        <option value="Playmaking 3-Level">Playmaking 3-Level</option>
+    </select>
+    <div id="static-info">
+        <h2>Current Build:</h2>
+        <p id="build-name">Select a build</p>
+        <p>Stream Record: [0-0]</p>
+    </div>
+    <div id="player-buttons">
+        <!-- Buttons for player stats will be added here dynamically -->
+    </div>
+    <div id="selected-player-stats">
+        <!-- Selected player stats will be shown here -->
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "your_api_key",
+            authDomain: "your_project_id.firebaseapp.com",
+            projectId: "your_project_id",
+            storageBucket: "your_project_id.appspot.com",
+            messagingSenderId: "your_messaging_sender_id",
+            appId: "your_app_id",
+            measurementId: "your_measurement_id"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            function updateBuildInfo() {
+                const buildSelector = document.getElementById('buildSelector');
+                const buildName = document.getElementById('build-name');
+                buildName.textContent = buildSelector.options[buildSelector.selectedIndex].text;
+            }
+
+            function createPlayerButton(playerId, displayName) {
+                const buttonContainer = document.getElementById('player-buttons');
+                const playerButton = document.createElement('button');
+                playerButton.className = 'player-button';
+                playerButton.textContent = displayName;
+                playerButton.onclick = async () => {
+                    const selectedPlayerStatsElement = document.getElementById('selected-player-stats');
+                    if (selectedPlayerStatsElement.getAttribute('data-current-player') === playerId) {
+                        selectedPlayerStatsElement.innerText = '';
+                        selectedPlayerStatsElement.removeAttribute('data-current-player');
+                    } else {
+                        const docRef = doc(db, "Player", playerId);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            selectedPlayerStatsElement.innerText = `Stats for ${displayName}: +/- ${data['+/-']}, PPG: ${data.PPG}, AST: ${data.AST}, REB: ${data.REB}`;
+                            selectedPlayerStatsElement.setAttribute('data-current-player', playerId);
+                        } else {
+                            selectedPlayerStatsElement.innerText = 'No stats available';
+                        }
+                    }
+                };
+                buttonContainer.appendChild(playerButton);
+            }
+
+            createPlayerButton('3ptPlaymaker', '3pt Playmaker');
+            createPlayerButton('Playmaking3Level', 'Playmaking 3-Level');
+            createPlayerButton('PlaymakingPerimeterCreator', 'Playmaking Perimeter Creator (99 3ball)');
+
+            document.getElementById('buildSelector').addEventListener('change', updateBuildInfo);
+            updateBuildInfo(); // Set initial build info
+        });
+    </script>
+</body>
+</html>
